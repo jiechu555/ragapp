@@ -9,4 +9,4 @@
 # deployments
 deployments/**/data/
 !deployments/multiple-ragapps/data/traefik
-deployments/**/ollama/
+deployments/**/ollama/ragapp_server.log

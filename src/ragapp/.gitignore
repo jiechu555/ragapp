@@ -7,3 +7,4 @@ storage/
 output/
 
 !config/*
+config/.env
