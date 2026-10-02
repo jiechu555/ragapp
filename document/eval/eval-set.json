@@ -1,0 +1,236 @@
+{
+  "questions": [
+    {
+      "q": "1450 瓦的咖啡机预热要多久",
+      "expect": [
+        "1450",
+        "40 秒"
+      ],
+      "style": "exact",
+      "target": "X1"
+    },
+    {
+      "q": "CADR 400 的净化器噪音多少分贝",
+      "expect": [
+        "400",
+        "32 分贝"
+      ],
+      "style": "exact",
+      "target": "P1"
+    },
+    {
+      "q": "每分钟 42000 次的牙刷续航多久",
+      "expect": [
+        "42000",
+        "30 天"
+      ],
+      "style": "exact",
+      "target": "T1"
+    },
+    {
+      "q": "吸力 30kPa 的吸尘器电池保几年",
+      "expect": [
+        "30kPa",
+        "电池保修 2 年"
+      ],
+      "style": "exact",
+      "target": "V2"
+    },
+    {
+      "q": "4 升的电饭煲用的是什么加热技术",
+      "expect": [
+        "4 升",
+        "IH 电磁加热"
+      ],
+      "style": "exact",
+      "target": "R1"
+    },
+    {
+      "q": "除垢剂多少钱",
+      "expect": [
+        "除垢剂 29 元"
+      ],
+      "style": "exact",
+      "target": "配件"
+    },
+    {
+      "q": "满多少包邮",
+      "expect": [
+        "满 199 元包邮"
+      ],
+      "style": "exact",
+      "target": "物流"
+    },
+    {
+      "q": "滤芯可以水洗吗",
+      "expect": [
+        "滤芯不可水洗"
+      ],
+      "style": "exact",
+      "target": "保养"
+    },
+    {
+      "q": "家里养了两只猫，床上沙发上全是毛，买哪款吸尘器合适",
+      "expect": [
+        "星辰无线吸尘器 V2"
+      ],
+      "style": "colloquial",
+      "target": "V2"
+    },
+    {
+      "q": "想每天早上一起床就有热乎的粥喝",
+      "expect": [
+        "24 小时预约"
+      ],
+      "style": "colloquial",
+      "target": "R1"
+    },
+    {
+      "q": "晚上开着睡觉会不会很吵影响睡眠",
+      "expect": [
+        "32 分贝",
+        "不扰眠"
+      ],
+      "style": "colloquial",
+      "target": "P1"
+    },
+    {
+      "q": "喜欢单独打奶泡做拉花应该选哪台",
+      "expect": [
+        "双锅炉",
+        "拉花"
+      ],
+      "style": "colloquial",
+      "target": "X1"
+    },
+    {
+      "q": "刷头多久换一次比较好",
+      "expect": [
+        "每 3 个月"
+      ],
+      "style": "colloquial",
+      "target": "T1"
+    },
+    {
+      "q": "东西用了几天发现坏了怎么办",
+      "expect": [
+        "15 天内可申请换新"
+      ],
+      "style": "colloquial",
+      "target": "售后"
+    },
+    {
+      "q": "推荐好友买有什么优惠",
+      "expect": [
+        "50 元优惠券"
+      ],
+      "style": "colloquial",
+      "target": "会员"
+    },
+    {
+      "q": "大件什么时候能发货",
+      "expect": [
+        "48 小时内发货"
+      ],
+      "style": "colloquial",
+      "target": "物流"
+    },
+    {
+      "q": "宿舍空间小，充电收纳方便的吸尘器",
+      "expect": [
+        "壁挂充电座"
+      ],
+      "style": "cross",
+      "target": "V2"
+    },
+    {
+      "q": "咖啡机的水箱最大有多少升",
+      "expect": [
+        "1.8 升"
+      ],
+      "style": "cross",
+      "target": "X2"
+    },
+    {
+      "q": "积分能干什么用",
+      "expect": [
+        "抵现或换购"
+      ],
+      "style": "cross",
+      "target": "会员"
+    },
+    {
+      "q": "尘杯多久倒一次，滤网怎么打理",
+      "expect": [
+        "每次使用后清空",
+        "每月水洗"
+      ],
+      "style": "cross",
+      "target": "保养"
+    },
+    {
+      "q": "能打豆浆还能做米糊，给三高老人买一台",
+      "expect": [
+        "星辰破壁机 B1"
+      ],
+      "style": "colloquial",
+      "target": "B1"
+    },
+    {
+      "q": "给爸妈买个泡脚桶冬天在家泡脚",
+      "expect": [
+        "星辰足浴盆 Z1"
+      ],
+      "style": "colloquial",
+      "target": "Z1"
+    },
+    {
+      "q": "孩子天天上网课，要护眼的灯",
+      "expect": [
+        "星辰护眼台灯 L1"
+      ],
+      "style": "colloquial",
+      "target": "L1"
+    },
+    {
+      "q": "头发毛躁，想要不伤头发的吹风机",
+      "expect": [
+        "星辰电吹风 F1"
+      ],
+      "style": "colloquial",
+      "target": "F1"
+    },
+    {
+      "q": "衬衫皱了，出门前想快速弄平整",
+      "expect": [
+        "星辰挂烫机 H1"
+      ],
+      "style": "colloquial",
+      "target": "H1"
+    },
+    {
+      "q": "冬天屋里太干，嗓子老不舒服",
+      "expect": [
+        "星辰加湿器 M1"
+      ],
+      "style": "colloquial",
+      "target": "M1"
+    },
+    {
+      "q": "早上赶时间，哪台咖啡机出杯最快",
+      "expect": [
+        "星辰咖啡机 X2"
+      ],
+      "style": "cross",
+      "target": "X2"
+    },
+    {
+      "q": "蓝山的 A7 咖啡机是你们星辰出的吗",
+      "expect": [
+        "非星辰"
+      ],
+      "style": "cross",
+      "target": "友商识别"
+    }
+  ]
+}

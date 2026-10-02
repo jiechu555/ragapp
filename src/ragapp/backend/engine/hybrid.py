@@ -89,19 +89,29 @@ def rrf_fuse(ranked_lists: List[List[NodeWithScore]], k: int = RRF_K) -> List[No
 
 
 def nodes_from_vector_store(vector_store: Any) -> List[BaseNode]:
-    """从 Chroma 等向量库的 _node_content 元数据重建节点（BM25 语料来源）。
+    """从 Chroma 向量库重建节点（BM25 语料来源）。
+    注意：正文在 chroma 的 documents 字段，_node_content 里的 text 为空串；
     避免引入 docstore 持久化依赖——ragapp 只把向量与节点内容存进向量库。"""
     nodes: List[BaseNode] = []
     try:
-        client = vector_store._chroma_collection
-        data = client.get(include=["metadatas"])
-        for meta in data["metadatas"]:
+        collection = getattr(vector_store, "_collection", None) or getattr(
+            vector_store, "chroma_collection", None
+        )
+        if collection is None:
+            raise AttributeError("no collection attribute on vector store")
+        data = collection.get(include=["metadatas", "documents"])
+        for meta, doc in zip(data["metadatas"], data["documents"]):
             raw = (meta or {}).get("_node_content")
-            if not raw:
+            if not raw or not doc:
                 continue
             payload = json.loads(raw)
-            if payload.get("text"):
-                nodes.append(TextNode.model_validate(payload))
+            nodes.append(
+                TextNode(
+                    id_=payload.get("id_"),
+                    text=doc,
+                    metadata=payload.get("metadata", {}),
+                )
+            )
     except Exception as e:  # noqa: BLE001
         logger.warning("从向量库重建节点失败，BM25 路降级: %s", e)
     return nodes
