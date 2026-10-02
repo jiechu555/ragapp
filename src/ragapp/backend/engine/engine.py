@@ -19,6 +19,29 @@ from backend.workflows.single import FunctionCallingAgent
 logger = logging.getLogger("uvicorn")
 
 
+def get_retriever(filters=None, params=None, top_k: Optional[int] = None, callback_manager=None):
+    """检索器装配（混合/单路由 USE_HYBRID 决定）。chat 路由降级路径复用同一装配。"""
+    top_k = top_k or int(os.getenv("TOP_K", "3"))
+    index_config = IndexConfig(callback_manager=callback_manager, **(params or {}))
+    index = get_index(index_config)
+    if index is None:
+        raise RuntimeError("Index is not found")
+    vector_retriever = index.as_retriever(
+        filters=filters,
+        **({"similarity_top_k": top_k} if top_k != 0 else {}),
+    )
+    if os.getenv("USE_HYBRID", "true").lower() == "true":
+        from backend.engine.hybrid import HybridRetriever, nodes_from_vector_store
+
+        return HybridRetriever(
+            vector_retriever,
+            nodes_from_vector_store(index.vector_store),
+            top_k=top_k,
+            filters=filters,
+        )
+    return vector_retriever
+
+
 def get_chat_engine(
     filters=None,
     params=None,
@@ -54,21 +77,7 @@ def get_chat_engine(
         raise RuntimeError("Index is not found")
 
     # 二开：混合检索（向量 + BM25，RRF 融合）。USE_HYBRID=false 可回退单路向量做对照。
-    vector_retriever = index.as_retriever(
-        filters=filters,
-        **({"similarity_top_k": top_k} if top_k != 0 else {}),
-    )
-    if os.getenv("USE_HYBRID", "true").lower() == "true":
-        from backend.engine.hybrid import HybridRetriever, nodes_from_vector_store
-
-        retriever = HybridRetriever(
-            vector_retriever,
-            nodes_from_vector_store(index.vector_store),
-            top_k=top_k,
-            filters=filters,
-        )
-    else:
-        retriever = vector_retriever
+    retriever = get_retriever(filters, params, top_k, callback_manager)
 
     from llama_index.core.query_engine import RetrieverQueryEngine
 

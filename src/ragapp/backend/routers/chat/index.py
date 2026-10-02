@@ -50,13 +50,18 @@ async def chat(
             event_handler = EventCallbackHandler()
             chat_engine.callback_manager.handlers.append(event_handler)  # type: ignore
 
-            response = chat_engine.astream_chat(last_message_content, messages)
+            # 二开：急切 await——condense（第一次 LLM 调用）失败能进降级路径，
+            # 而不是在流式生成器内部炸成空响应。代价：TTFB 增加 condense 时长（~1s）
+            response = await chat_engine.astream_chat(last_message_content, messages)
+
+            async def _resolved(r=response):
+                return r
 
             return ChatEngineVercelStreamResponse(
                 request=request,
                 event_handler=event_handler,
                 chat_data=data,
-                response=response,
+                response=_resolved(),
                 background_tasks=background_tasks,
             )
         else:
@@ -68,8 +73,20 @@ async def chat(
                 events=chat_engine.stream_events(),
             )
     except Exception as e:
-        logger.exception("Error in chat engine", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error in chat engine: {e}",
-        ) from e
+        # 二开：LLM 链路失败降级——检索摘要 + degraded 标记（HTTP 200），不再 500
+        # （mall RAG 同款策略：客服"回答不了"不是系统错误，前端凭 degraded 引导转人工）
+        logger.exception("LLM 链路失败，降级: %s", e)
+        try:
+            filters = generate_filters(data.get_chat_document_ids())
+            from backend.engine.degraded import build_degraded_response
+            from backend.engine.engine import get_retriever
+
+            retriever = get_retriever(filters=filters, params=data.data or {})
+            return await build_degraded_response(
+                retriever, data.get_last_message_content(), reason=str(e)[:200]
+            )
+        except Exception as inner:  # noqa: BLE001  检索也挂：如实 500
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error in chat engine: {e}; degraded path failed: {inner}",
+            ) from inner

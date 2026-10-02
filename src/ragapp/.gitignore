@@ -8,3 +8,6 @@ output/
 
 !config/*
 config/.env
+config/.env.bak
+ragapp_server.log
+*.bak

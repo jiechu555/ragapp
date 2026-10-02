@@ -101,6 +101,11 @@ def init_openai():
             dimensions=int(dimensions) if dimensions is not None else None,
         )
 
+    # 二开：embedding LRU 缓存（重复查询不再重复调 API）
+    from backend.engine.embedding_cache import wrap_with_cache
+
+    Settings.embed_model = wrap_with_cache(Settings.embed_model)
+
 
 def init_azure_openai():
     from llama_index.core.constants import DEFAULT_TEMPERATURE
