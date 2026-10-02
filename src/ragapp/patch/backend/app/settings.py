@@ -83,11 +83,12 @@ def init_openai():
 
     dimensions = os.getenv("EMBEDDING_DIM")
     if os.getenv("OPENAI_API_BASE"):
-        # 二开：自定义 OpenAI 兼容端点（智谱/SiliconFlow 等）时，模型名不受
-        # OpenAIEmbeddingModelType 枚举限制，走 OpenAILikeEmbedding
-        from llama_index.embeddings.openai_like import OpenAILikeEmbedding
+        # 二开：自定义 OpenAI 兼容端点（智谱等）。不用 llama-index-embeddings-openai-like
+        # ——其全版本线与 ragapp 锁定的 llama-index-embeddings-openai 0.2.x 冲突；
+        # 自实现 OpenAICompatEmbedding 零版本约束，见 backend/engine/compat_embedding.py
+        from backend.engine.embedding_cache import CachedOpenAICompatEmbedding
 
-        Settings.embed_model = OpenAILikeEmbedding(
+        Settings.embed_model = CachedOpenAICompatEmbedding(
             model_name=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
             api_base=os.getenv("OPENAI_API_BASE"),
             api_key=os.getenv("OPENAI_API_KEY"),

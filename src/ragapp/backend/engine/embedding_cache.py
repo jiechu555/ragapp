@@ -16,7 +16,7 @@ from collections import OrderedDict
 from threading import Lock
 from typing import List, Optional
 
-from llama_index.embeddings.openai_like import OpenAILikeEmbedding
+from backend.engine.compat_embedding import OpenAICompatEmbedding
 
 logger = logging.getLogger("uvicorn")
 
@@ -46,15 +46,15 @@ def _cache_put(key: str, value: List[float]) -> None:
         _MISSES += 1
 
 
-class CachedOpenAILikeEmbedding(OpenAILikeEmbedding):
-    """OpenAILikeEmbedding 的带 LRU 缓存版本（智谱等自定义端点）。"""
+class CachedOpenAICompatEmbedding(OpenAICompatEmbedding):
+    """OpenAICompatEmbedding 的带 LRU 缓存版本。"""
 
     def _get_query_embedding(self, query: str) -> List[float]:
         key = "q|" + query
         cached = _cache_get(key)
         if cached is not None:
             return cached
-        value = super(CachedOpenAILikeEmbedding, self)._get_query_embedding(query)
+        value = super(CachedOpenAICompatEmbedding, self)._get_query_embedding(query)
         _cache_put(key, value)
         return value
 
@@ -63,7 +63,7 @@ class CachedOpenAILikeEmbedding(OpenAILikeEmbedding):
         cached = _cache_get(key)
         if cached is not None:
             return cached
-        value = await super(CachedOpenAILikeEmbedding, self)._aget_query_embedding(query)
+        value = await super(CachedOpenAICompatEmbedding, self)._aget_query_embedding(query)
         _cache_put(key, value)
         return value
 
@@ -72,7 +72,7 @@ class CachedOpenAILikeEmbedding(OpenAILikeEmbedding):
         cached = _cache_get(key)
         if cached is not None:
             return cached
-        value = super(CachedOpenAILikeEmbedding, self)._get_text_embedding(text)
+        value = super(CachedOpenAICompatEmbedding, self)._get_text_embedding(text)
         _cache_put(key, value)
         return value
 
@@ -83,7 +83,7 @@ class CachedOpenAILikeEmbedding(OpenAILikeEmbedding):
             results[i] = _cache_get("t|" + t)
         missing = [(i, t) for i, t in enumerate(texts) if results[i] is None]
         if missing:
-            computed = super(CachedOpenAILikeEmbedding, self)._get_text_embeddings(
+            computed = super(CachedOpenAICompatEmbedding, self)._get_text_embeddings(
                 [t for _, t in missing]
             )
             for (i, t), v in zip(missing, computed):
@@ -99,10 +99,10 @@ class CachedOpenAILikeEmbedding(OpenAILikeEmbedding):
 def wrap_with_cache(embed_model):
     """将已装配的 embed_model 替换为缓存版（参数从环境变量重取——pydantic 基类
     不可靠地暴露 model_name；非 OpenAILike 实现原样返回）。"""
-    if isinstance(embed_model, CachedOpenAILikeEmbedding):
+    if isinstance(embed_model, CachedOpenAICompatEmbedding):
         return embed_model
     try:
-        wrapped = CachedOpenAILikeEmbedding(
+        wrapped = CachedOpenAICompatEmbedding(
             model_name=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
             api_base=os.getenv("OPENAI_API_BASE"),
             api_key=os.getenv("OPENAI_API_KEY"),
