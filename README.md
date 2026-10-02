@@ -13,6 +13,11 @@
 | 5 | 自实现 Embedding + CI | `OpenAICompatEmbedding`（60 行 BaseEmbedding 子类）替换版本冲突的 openai-like 包；GitHub Actions 24 用例全绿 |
 | 6 | 收官 | 本 README、复现指南、查询改写展望 |
 
+## 产品文档
+
+- [PRD：星辰智能客服（基于本二开）](docs/PRD.md)——目标用户/用户旅程/功能优先级（P0 已实现均有实测验收标准）/风险清单
+- [竞品分析：Dify / Coze / FastGPT 对比](docs/competitive-analysis.md)——中小企业客服场景适配度与差异化判断
+
 ## 快速复现（智谱端点）
 
 ```bash
