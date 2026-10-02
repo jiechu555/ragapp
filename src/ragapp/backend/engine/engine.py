@@ -53,10 +53,30 @@ def get_chat_engine(
     if index is None:
         raise RuntimeError("Index is not found")
 
-    query_engine = index.as_query_engine(
-        similarity_top_k=top_k,
-        node_postprocessors=node_postprocessors,
+    # 二开：混合检索（向量 + BM25，RRF 融合）。USE_HYBRID=false 可回退单路向量做对照。
+    vector_retriever = index.as_retriever(
         filters=filters,
+        **({"similarity_top_k": top_k} if top_k != 0 else {}),
+    )
+    if os.getenv("USE_HYBRID", "true").lower() == "true":
+        from backend.engine.hybrid import HybridRetriever, nodes_from_vector_store
+
+        retriever = HybridRetriever(
+            vector_retriever,
+            nodes_from_vector_store(index.vector_store),
+            top_k=top_k,
+            filters=filters,
+        )
+    else:
+        retriever = vector_retriever
+
+    from llama_index.core.query_engine import RetrieverQueryEngine
+
+    query_engine = RetrieverQueryEngine.from_args(
+        retriever,
+        llm=Settings.llm,
+        node_postprocessors=node_postprocessors,
+        callback_manager=callback_manager,
     )
     agents = get_agents(chat_history, query_engine)
     if len(agents) == 0:
@@ -76,10 +96,7 @@ def get_chat_engine(
                     token_limit=Settings.llm.metadata.context_window - 256
                 ),
                 system_prompt=system_prompt,
-                retriever=index.as_retriever(
-                    filters=filters,
-                    **({"similarity_top_k": top_k} if top_k != 0 else {}),
-                ),
+                retriever=retriever,
                 node_postprocessors=node_postprocessors,
                 callback_manager=callback_manager,
             )
