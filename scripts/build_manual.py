@@ -183,6 +183,21 @@ for i, (a, b) in enumerate(rows):
                 rr.font.color.rgb = RGBColor.from_string("FFFFFF")
 doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
+# ============ 目录速览 ============
+heading("项目目录速览 · 每个文件是干什么的", size=13, space_before=10)
+term_block([
+    ("src/ragapp/", BLUE),
+    ("├─ main.py                     ← 启动入口：uvicorn 拉起 FastAPI 应用（PYTHONPATH 就是为它服务）", "D4D4D4"),
+    ("├─ backend/engine/", GRAY),
+    ("│   ├─ hybrid.py               ← 混合检索核心：分词/BM25/RRF 融合（精读主角，见后文）", "D4D4D4"),
+    ("│   ├─ compat_embedding.py     ← 自实现智谱向量化客户端（60 行，替换版本冲突的官方包）", "D4D4D4"),
+    ("│   ├─ embedding_cache.py      ← 向量化 LRU 缓存（同问题不重复花钱调 API）", "D4D4D4"),
+    ("│   └─ degraded.py             ← LLM 挂掉时的降级响应生成（同流式协议格式）", "D4D4D4"),
+    ("├─ create_llama/backend/app/   ← 官方脚手架；settings.py 是二开补丁注入点（OPENAI_API_BASE 判断）", "D4D4D4"),
+    ("├─ static/chat.html            ← 教学版聊天页（50 行手写，步骤 6 用的就是它）", "D4D4D4"),
+    ("└─ config/.env                 ← 智谱 API key（gitignore 不入库）", "D4D4D4"),
+], title="目录树")
+
 # ============ 步骤 1 ============
 heading("步骤 1 · 打开终端，进入项目目录")
 body("打开 Git Bash（开始菜单搜 Git Bash），逐行输入：")
@@ -258,6 +273,7 @@ try:
     doc.add_picture(r"C:\Users\12808\Documents\code\ragapp\scripts\manual-assets\chat.png", width=Inches(5.8))
     last = doc.paragraphs[-1]
     last.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    last.paragraph_format.keep_with_next = True
     cap = doc.add_paragraph()
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = cap.add_run("▲ 实机截图：教学版聊天页，问题与回答均来自本地 ragapp + 智谱 GLM")
@@ -308,6 +324,37 @@ body("三个关键设计为什么（面试常问）：")
 body("① 为什么混合检索？BM25 抓关键词精确匹配（型号、专有名词），向量抓语义（换个说法也能找到）。中文场景 BM25 必须自己做二元分词，英文分词器对中文是整句一个词。", size=9.5)
 body("② RRF 是什么？两路打分量纲不同（BM25 是 TF-IDF 分、kNN 是余弦相似度），直接加权要调参。RRF 只看排名不看分数——每路第 r 名贡献 1/(60+r) 分，天然免疫量纲差异，k=60 是原论文通用值。", size=9.5)
 body("③ 为什么有降级？LLM 是外部 API，会挂会超时。设计上检索在本地永远可用，LLM 失败时退化为检索摘要，服务不 503——这是可用性设计，不是补丁。", size=9.5)
+
+# ============ 代码精读 ============
+heading("代码精读 · hybrid.py 三段核心（面试主打，第 3 课全文精读的预告）", size=14)
+body("① 中文分词——为什么「二元」：", size=10)
+term_block([
+    ("def tokenize(text):  # CJK 字符二元切分 + ASCII 词元（小写）", YELLOW),
+    ("    for raw in re.findall(r'[a-zA-Z0-9]+|[\\u4e00-\\u9fff]+', text.lower()):", "D4D4D4"),
+    ("        if _CJK_RE.search(raw):", "D4D4D4"),
+    ("            tokens.extend(raw[i:i+2] for i in range(len(raw)-1))  # 滑窗切 2 字", "D4D4D4"),
+], title="hybrid.py · tokenize")
+body("「整机保修」→ [整机, 机保, 保修]：中文没空格，二元滑窗是最紧凑的近似分词——不依赖分词库、新词天然覆盖（型号、错别字都能切出来）。缺点：词表有噪声，靠 BM25 的 IDF 自然降权。", size=9.5)
+body("② RRF 融合——三行核心：", size=10)
+term_block([
+    ("def rrf_fuse(ranked_lists, k=60):", YELLOW),
+    ("    for ranked in ranked_lists:", "D4D4D4"),
+    ("        for rank, nws in enumerate(ranked):        # 两路各自的名次", "D4D4D4"),
+    ("            scores[key] = scores.get(key, 0) + 1/(k + rank + 1)", BLUE),
+    ("    # 同一文档两路都在 → 分数叠加 → 共识文档胜出单路冠军", GRAY),
+], title="hybrid.py · rrf_fuse")
+body("看这个结构：不需要读两路的原始分数（BM25 的 8.3 和余弦的 0.87 量纲完全不同），只要名次。第 1 名 1/61，第 2 名 1/62……名次差才有信息量。两路都排前面的文档分数翻倍——这就是「共识 > 单路」的数学实现。", size=9.5)
+body("③ 检索入口——一次 _retrieve 干完所有事：", size=10)
+term_block([
+    ("def _retrieve(self, query, **kwargs):", YELLOW),
+    ("    query_str = getattr(query, 'query_str', None) or str(query)", "D4D4D4"),
+    ("    vector_hits = self._vector_retriever.retrieve(query)   # 路 1：向量", "D4D4D4"),
+    ("    q_tokens = tokenize(query_str)", "D4D4D4"),
+    ("    scores = bm25_scores(q_tokens, self._corpus_tokens)    # 路 2：BM25", "D4D4D4"),
+    ("    bm25_hits = [...ranked[:top_k] if s > 0]", "D4D4D4"),
+    ("    return rrf_fuse([vector_hits, bm25_hits])[:top_k]      # 融合收口", "D4D4D4"),
+], title="hybrid.py · _retrieve")
+body("注意 query_str 那行：llama_index 标准路径传 QueryBundle 对象、测试直接传字符串——getattr 兜底两种输入，这是对接框架的防御性写法（早期版本这里踩过坑：直接 query.query_str 在裸字符串下炸）。", size=9.5)
 
 # ============ 历史实测 ============
 heading("历史实测数据（跑通后的下一步：量化它）", size=14)
@@ -383,6 +430,39 @@ for fid, sym, cause, fix in faults:
                 r.font.size = Pt(9.5)
                 r.font.name = "Microsoft YaHei"
                 r._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+
+# ============ 术语表 ============
+heading("术语表 · 面试口语必备（说得出中文也要说得出英文）", size=13, space_before=10)
+tbl = doc.add_table(rows=11, cols=2)
+tbl.style = "Table Grid"
+rows = [
+    ("术语", "一句话解释"),
+    ("RAG 检索增强生成", "Retrieval-Augmented Generation：先检索知识库再让 LLM 基于检索结果回答"),
+    ("Embedding 向量化", "把文本映射成高维向量，语义相近 → 向量距离近（本项目 1024 维）"),
+    ("kNN 检索", "k-Nearest Neighbors：在向量库里找与问题向量最近的 k 个文档块"),
+    ("BM25", "经典关键词打分公式：词频×逆文档频率×长度归一，不依赖模型"),
+    ("RRF", "Reciprocal Rank Fusion：按名次倒数融合多路检索结果，免疫量纲差异"),
+    ("召回 / hit@1", "前 k 结果里含正确文档的比例；hit@1 = 第一条就命中"),
+    ("Chunk 切块", "长文档切成可检索的小段（检索粒度和上下文长度的平衡）"),
+    ("降级 Degraded", "外部依赖失效时退到次优方案继续服务，不让用户看到报错"),
+    ("LRU 缓存", "Least Recently Used：容量满时淘汰最久未用的条目"),
+]
+for i, (a, b) in enumerate(rows):
+    c0, c1 = tbl.rows[i].cells
+    c0.text, c1.text = a, b
+    for c in (c0, c1):
+        for pp in c.paragraphs:
+            pp.paragraph_format.keep_with_next = (i == 0)
+            for rr in pp.runs:
+                rr.font.size = Pt(9)
+                rr.font.name = "Microsoft YaHei"
+                rr._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+    if i == 0:
+        set_cell_bg(c0, "1A2636"); set_cell_bg(c1, "1A2636")
+        for pp in c0.paragraphs + c1.paragraphs:
+            for rr in pp.runs:
+                rr.font.color.rgb = RGBColor.from_string("FFFFFF")
+doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
 # ============ 自测题 ============
 heading("第 0 课自测题（做完手册后回答，不看讲义）", size=13, space_before=10)
