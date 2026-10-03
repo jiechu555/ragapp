@@ -94,6 +94,35 @@ def term_block(lines, title=None):
 
 
 GREEN = "6A9955"
+
+
+def tip_block(title, text):
+    """知识点卡片：浅蓝底，穿插在步骤之间帮助理解"""
+    table = doc.add_table(rows=1, cols=1)
+    table.autofit = True
+    tr = table.rows[0]._tr
+    trPr = tr.get_or_add_trPr()
+    cantSplit = OxmlElement("w:cantSplit")
+    trPr.append(cantSplit)
+    cell = table.rows[0].cells[0]
+    set_cell_bg(cell, "EEF4FB")
+    p = cell.paragraphs[0]
+    p.paragraph_format.space_after = Pt(2)
+    r = p.add_run("💡 知识点 · " + title)
+    r.bold = True
+    r.font.size = Pt(9.5)
+    r.font.color.rgb = RGBColor.from_string("0B57D0")
+    r.font.name = "Microsoft YaHei"
+    r._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+    p2 = cell.add_paragraph()
+    p2.paragraph_format.space_after = Pt(0)
+    r2 = p2.add_run(text)
+    r2.font.size = Pt(9.5)
+    r2.font.color.rgb = RGBColor.from_string("2C3E50")
+    r2.font.name = "Microsoft YaHei"
+    r2._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+    return table
 YELLOW = "DCDCAA"
 BLUE = "569CD6"
 GRAY = "9AA4B2"
@@ -121,6 +150,39 @@ body("")
 body("适用环境：Windows + Git Bash + Python 3.11（poetry 虚环境已就绪）。全部命令与输出为 2026-10-03 实机复现记录，逐条可复制。")
 body("跟随本手册走完 = 你独立跑通了简历主推项目。出错时先查文末《常见故障速查表》。", color="0B57D0")
 
+# ============ 学习地图 ============
+heading("学习地图 · 这本手册教你什么", size=13, space_before=10)
+body("跑通只是结果，真正值钱的是路上这 8 个概念——每个都对应手册里的一个步骤和课程体系的一课：", size=9.5)
+tbl = doc.add_table(rows=9, cols=2)
+tbl.style = "Table Grid"
+rows = [
+    ("概念", "在哪学（步骤 → 第几课）"),
+    ("虚拟环境与依赖锁", "步骤 2 → 第 1 课"),
+    ("模块导入机制（PYTHONPATH）", "步骤 3 → 第 2 课"),
+    ("HTTP 服务与状态码", "步骤 4 → 第 1 课"),
+    ("REST 接口与 curl 调试", "步骤 5 → 第 2 课"),
+    ("流式响应（为什么聊天要打字机效果）", "步骤 6 → 第 2 课"),
+    ("检索三范式：关键词/语义/混合", "原理图解 → 第 3 课"),
+    ("评测思维：怎么量化『好用』", "历史实测 → 第 5 课"),
+    ("降级设计：外部依赖会挂怎么办", "原理图解 → 第 4 课"),
+]
+for i, (a, b) in enumerate(rows):
+    c0, c1 = tbl.rows[i].cells
+    c0.text, c1.text = a, b
+    for c in (c0, c1):
+        for pp in c.paragraphs:
+            pp.paragraph_format.keep_with_next = (i == 0)
+            for rr in pp.runs:
+                rr.font.size = Pt(8.5)
+                rr.font.name = "Microsoft YaHei"
+                rr._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+    if i == 0:
+        set_cell_bg(c0, "1A2636"); set_cell_bg(c1, "1A2636")
+        for pp in c0.paragraphs + c1.paragraphs:
+            for rr in pp.runs:
+                rr.font.color.rgb = RGBColor.from_string("FFFFFF")
+doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
 # ============ 步骤 1 ============
 heading("步骤 1 · 打开终端，进入项目目录")
 body("打开 Git Bash（开始菜单搜 Git Bash），逐行输入：")
@@ -141,6 +203,9 @@ term_block([
 ], title="终端")
 body("若报 ModuleNotFoundError：见故障表 F2。")
 
+tip_block("虚拟环境与依赖锁（步骤 2 的灵魂）",
+    "每个 Python 项目一个独立环境，互不污染——A 项目要 libX 1.0、B 项目要 2.0，全局只能装一个，虚拟环境各装各的。poetry.lock 锁的不是『大概版本』而是精确到补丁号的整棵依赖树，任何人 poetry install 都得到一模一样的环境——这就是为什么本手册能保证你复现不出 bug。想一想：为什么 pip install 装了『更新的版本』反而可能坏？→ 因为新版本改了 API，锁文件就是防这个的。")
+
 # ============ 步骤 3 ============
 heading("步骤 3 · 启动服务器")
 body("两个关键：① 必须在 src/ragapp 目录下；② 必须带 PYTHONPATH（原因见自测题 Q1）：")
@@ -150,6 +215,9 @@ term_block([
     ("INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)", GREEN),
 ], title="终端")
 body("看到 Uvicorn running 即启动成功（约 20-30 秒）。这个终端窗口要保持开着——服务器在前台运行，关窗口=关服务。", color="B45309")
+
+tip_block("PYTHONPATH 与 import 机制（步骤 3 为什么那样启动）",
+    "Python 找模块靠 sys.path 列表：当前目录 → PYTHONPATH 环境变量 → 安装目录，按序查找。main.py 里 import app.xxx，而 app 包在 create_llama/backend/ 下——不设 PYTHONPATH，解释器在默认路径里找不到就报 ModuleNotFoundError（正是故障 F3）。环境变量只对这一条命令生效，不污染系统。想一想：把 backend 目录的代码复制到当前目录行不行？→ 行但丑，路径引用全会乱。")
 
 # ============ 步骤 4 ============
 heading("步骤 4 · 验证服务存活（新开一个终端标签）")
@@ -161,6 +229,9 @@ term_block([
     ("200", GREEN),
 ], title="终端（第二个标签）")
 body("HTTP 200 = 服务器活着。若连接被拒绝：见故障表 F1。")
+
+tip_block("HTTP 状态码分层排错法（步骤 4 在验什么）",
+    "200=服务活着且处理成功；404=服务活着但路径错；500=服务活着但代码炸了；连接拒绝=服务根本没起来。先 curl 一发把问题定位到层，再去看日志——这是后端排错第一反射。/config 端点返回运行配置，是『服务体检』的惯用入口。想一想：curl 返回 500 你第一件事干嘛？→ 看服务端日志最后几行，而不是改客户端。")
 
 # ============ 步骤 5 ============
 heading("步骤 5 · 端到端问答测试（E2E）")
@@ -176,6 +247,9 @@ term_block([
     ("    A(3.9s): …签收后7天内可以无理由退货…质量问题，可以在15天内换新机…", GREEN),
 ], title="终端（第二个标签）")
 body("三个回答都正确出现 = 完整链路（文档上传→智谱向量化→混合检索→GLM 生成）全部健康。✅ 第 0 课验收通过。", color="0B57D0")
+
+tip_block("curl 与 REST 语义（步骤 5 在干什么）",
+    "curl 是命令行 HTTP 客户端：-X 指动词（GET 读/POST 写）、-H 加请求头、-d 带请求体。REST 约定：URL 是资源（/api/chat 是『对话』资源）、动词表意图、响应是 JSON{code, data} 结构。测试脚本本质是三个 HTTP 请求的自动重放+断言——你手写 curl 就是在手动做 E2E。想一想：为什么测试要问『整机保修』这种知识库里的问题？→ 答案必须来自检索命中，模型瞎编就露馅，这是检验 RAG 真伪的关键设计。")
 
 # ============ 步骤 6 ============
 heading("步骤 6 · 用浏览器跟你的系统对话")
@@ -195,6 +269,9 @@ except Exception as e:
     body(f"[截图缺失: {e}]")
 body("在输入框输入任意问题（例如：买的咖啡机不满意能退吗）→ 回车 → 等待 3-5 秒。这个页面就是你的系统在\"服务用户\"的样子。")
 
+tip_block("流式响应（步骤 6 为什么像打字机）",
+    "大模型生成是逐 token 的，等全生成完再返回，用户要盯着空白等 3 秒——首字延迟体验极差。流式把『生成一点发一点』变成 HTTP 分块传输。本项目用的是 Vercel AI SDK 协议：每行一个 JSON 片段，前缀 0: 是文本增量、8: 是事件（如降级标记）。浏览器端用 fetch 整包读再按行解析（本项目的 chat.html 就是 50 行手写实现，第 1 课会带你重写一遍）。想一想：SSE 和普通分块传输什么区别？→ SSE 是带 event/data 格式约定的分块，本质都是流。")
+
 # ============ 步骤 7 ============
 heading("步骤 7 · 停止服务器")
 body("回到步骤 3 的终端窗口按 Ctrl+C；若无效（Windows 偶发），用端口定位强停：")
@@ -205,6 +282,9 @@ term_block([
     ("成功: 已终止 PID 为 20264 的进程。", GREEN),
 ], title="终端")
 body("注意 Git Bash 里是双斜杠 //PID（MSYS 路径转换，单斜杠会被吃掉）。")
+
+tip_block("进程、端口与 PID（步骤 7 的排错逻辑）",
+    "每个运行的程序是一个进程，有唯一 PID；端口是进程对外服务的门牌号，一个端口同一时刻只能一个进程监听。『端口被占用』= 上一个服务没退干净——netstat 找到占用的 PID，taskkill 定点清除。Ctrl+C 发的是中断信号，正常情况进程优雅退出，Windows 偶发卡死才需要 kill -F（强杀）。想一想：为什么强杀是最后手段？→ 进程没机会保存状态、关闭文件，可能留下脏数据。")
 
 # ============ 原理图解 ============
 heading("原理图解 · RAG 全链路（这个系统到底在干嘛）", size=14)
