@@ -198,6 +198,38 @@ term_block([
     ("└─ config/.env                 ← 智谱 API key（gitignore 不入库）", "D4D4D4"),
 ], title="目录树")
 
+# ============ 8课路线图 ============
+heading("后续 8 课路线图 · 这本手册只是起点", size=13, space_before=10)
+tbl = doc.add_table(rows=9, cols=2)
+tbl.style = "Table Grid"
+rows = [
+    ("课次", "主题与验收"),
+    ("第 0 课（本手册）", "独立跑通全流程 + 答三道自测题"),
+    ("第 1 课", "FastAPI 最小应用：自己写一个 /hello 接口 + 手写 50 行聊天页精讲"),
+    ("第 2 课", "ragapp 入口解剖：一个请求从 main.py 到响应的完整链路"),
+    ("第 3 课", "hybrid.py 全文精读（面试主打，本手册代码精读是预告片）"),
+    ("第 4 课", "亲手改功能：加一个「检索调试接口」返回双路原始排名"),
+    ("第 5 课", "pytest：给第 4 课的新接口写测试"),
+    ("第 6-7 课", "Git 工作流 + 破坏实验（故意搞坏再修好，练排错）"),
+    ("第 8 课·结业", "无提示完成「新接口 + 测试 + 提交」全流程 = 出师"),
+]
+for i, (a, b) in enumerate(rows):
+    c0, c1 = tbl.rows[i].cells
+    c0.text, c1.text = a, b
+    for c in (c0, c1):
+        for pp in c.paragraphs:
+            pp.paragraph_format.keep_with_next = (i == 0)
+            for rr in pp.runs:
+                rr.font.size = Pt(8.5)
+                rr.font.name = "Microsoft YaHei"
+                rr._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+    if i == 0:
+        set_cell_bg(c0, "1A2636"); set_cell_bg(c1, "1A2636")
+        for pp in c0.paragraphs + c1.paragraphs:
+            for rr in pp.runs:
+                rr.font.color.rgb = RGBColor.from_string("FFFFFF")
+doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
 # ============ 步骤 1 ============
 heading("步骤 1 · 打开终端，进入项目目录")
 body("打开 Git Bash（开始菜单搜 Git Bash），逐行输入：")
@@ -371,6 +403,7 @@ for i, (a, b) in enumerate(rows):
     c0.text, c1.text = a, b
     for c in (c0, c1):
         for pp in c.paragraphs:
+            pp.paragraph_format.keep_with_next = (i == 0)
             for rr in pp.runs:
                 rr.font.size = Pt(9)
                 rr.font.name = "Microsoft YaHei"
@@ -463,6 +496,52 @@ for i, (a, b) in enumerate(rows):
             for rr in pp.runs:
                 rr.font.color.rgb = RGBColor.from_string("FFFFFF")
 doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
+# ============ 动手练习 ============
+heading("动手练习 · 读十遍不如做一遍（每个都有验证标准）", size=13, space_before=10)
+for t, d, v in [
+    ("练习 1 · 观察降级（10 分钟）",
+     "把 config/.env 里的智谱 key 故意改错一位，重启服务，在 chat.html 里问一个问题。",
+     "验证：仍然有回答（检索摘要话术）而非报错；页面下方出现降级提示。恢复 key 重启即复原——这就是降级设计的活演示（对应 commit 4 实测）。"),
+    ("练习 2 · 改前端不用动后端（5 分钟）",
+     "用记事本打开 static/chat.html，把页面标题「星辰智能客服」改成你想要的名字，保存后浏览器刷新（F5），不重启服务器。",
+     "验证：标题变了。想一想为什么——静态文件是服务器直接读盘返回的，改它不需要重启 Python 进程；而改任何 .py 都要重启。"),
+    ("练习 3 · 摸清证据链（10 分钟）",
+     "打开 document/evaluation/（评测报告），找到 28 问里关于「保修」的三种问法，对照 hit@1 数字，再回到 chat.html 用同样的三种问法各问一遍。",
+     "验证：你能亲手复现评测里的命中/未命中，并且明白「三风格」设计为什么能暴露检索的短板（同义改写、口语化、关键词混排）。"),
+]:
+    body(t, color="1A2636", size=10, keep=True)
+    body("做法：" + d, size=9.5, keep=True)
+    body(v, size=9.5, color="5F6B7A")
+
+# ============ 简历对照 ============
+heading("简历对照 · 简历上的每句话在本手册哪里", size=13, space_before=10)
+tbl = doc.add_table(rows=5, cols=2)
+tbl.style = "Table Grid"
+rows = [
+    ("简历句子（PythonAI 版项目栏）", "证据位置"),
+    ("「基于 OpenAI 兼容层接入国产大模型」", "步骤 2 依赖 + 原理图解；compat_embedding.py 目录速览"),
+    ("「BM25 与向量双路混合检索 + RRF 融合」", "原理图解 + 代码精读 hybrid.py 三段"),
+    ("「LLM 失效降级设计，服务永不 503」", "知识卡片（流式/降级）+ 练习 1 亲手触发"),
+    ("「评测集 28 问三风格 hit@1 86%」", "历史实测数据表 + 练习 3 亲手复现"),
+]
+for i, (a, b) in enumerate(rows):
+    c0, c1 = tbl.rows[i].cells
+    c0.text, c1.text = a, b
+    for c in (c0, c1):
+        for pp in c.paragraphs:
+            pp.paragraph_format.keep_with_next = (i == 0)
+            for rr in pp.runs:
+                rr.font.size = Pt(9)
+                rr.font.name = "Microsoft YaHei"
+                rr._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+    if i == 0:
+        set_cell_bg(c0, "1A2636"); set_cell_bg(c1, "1A2636")
+        for pp in c0.paragraphs + c1.paragraphs:
+            for rr in pp.runs:
+                rr.font.color.rgb = RGBColor.from_string("FFFFFF")
+doc.add_paragraph().paragraph_format.space_after = Pt(2)
+body("用法：面试前一晚只看右列的章节，每句话都能落到自己亲手跑过的东西上。", size=9, color="0B57D0")
 
 # ============ 自测题 ============
 heading("第 0 课自测题（做完手册后回答，不看讲义）", size=13, space_before=10)
