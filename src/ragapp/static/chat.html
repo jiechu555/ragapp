@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>星辰智能客服（ragapp 教学版 UI）</title>
+<style>
+  body { font-family: system-ui, "Microsoft YaHei", sans-serif; max-width: 720px; margin: 0 auto; padding: 24px; background: #f7f8fa; }
+  h1 { font-size: 20px; color: #1a2636; }
+  #chat { background: #fff; border: 1px solid #e3e6ea; border-radius: 12px; padding: 20px; min-height: 240px; margin-bottom: 16px; }
+  .msg { margin: 10px 0; line-height: 1.6; }
+  .user { color: #0b57d0; }
+  .bot { color: #1a2636; white-space: pre-wrap; }
+  .degraded { color: #b45309; font-size: 13px; }
+  #bar { display: flex; gap: 8px; }
+  #q { flex: 1; padding: 10px 14px; border: 1px solid #c9ced6; border-radius: 8px; font-size: 15px; }
+  #send { padding: 10px 22px; background: #0b57d0; color: #fff; border: 0; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  #send:disabled { background: #9aa4b2; }
+</style>
+</head>
+<body>
+<h1>星辰智能客服 <span style="font-size:13px;color:#5f6b7a">（ragapp 二开 · 教学版 UI）</span></h1>
+<div id="chat"><div class="msg bot">你好，我是基于知识库的智能客服，请问有什么可以帮您？</div></div>
+<div id="bar">
+  <input id="q" placeholder="例如：X1 咖啡机保修几年？" autofocus>
+  <button id="send" onclick="ask()">发送</button>
+</div>
+<script>
+async function ask() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  const chat = document.getElementById('chat');
+  chat.insertAdjacentHTML('beforeend', '<div class="msg user">你：' + q + '</div>');
+  const bot = document.createElement('div');
+  bot.className = 'msg bot';
+  bot.textContent = ' assistant：';
+  chat.appendChild(bot);
+  document.getElementById('send').disabled = true;
+  try {
+    bot.textContent = 'assistant：思考中…';
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: q }] })
+    });
+    const raw = await resp.text();
+    let text = '';
+    let degraded = false;
+    for (const line of raw.split('\n')) {
+      if (line.startsWith('0:')) {
+        try { text += JSON.parse(line.slice(2)); } catch (e) {}
+      }
+      if (line.startsWith('8:') && line.includes('degraded')) degraded = true;
+    }
+    bot.textContent = 'assistant：' + (text || '（空响应）');
+    if (degraded) bot.insertAdjacentHTML('beforeend', '<div class="degraded">（降级模式：智能回答暂不可用，以上为相关资料）</div>');
+  } catch (e) {
+    bot.textContent = '请求失败：' + e.message;
+  }
+  document.getElementById('q').value = '';
+  document.getElementById('send').disabled = false;
+}
+document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+</script>
+</body>
+</html>
